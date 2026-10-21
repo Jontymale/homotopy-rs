@@ -197,6 +197,10 @@ impl<'a> Frame<'a> {
                 self.opts.clear_color.z,
                 self.opts.clear_color.w,
             );
+            // A blended draw in an earlier frame leaves depth writes off, and
+            // with the depth mask off `clear` silently skips the depth buffer.
+            gl.depth_mask(true);
+            gl.disable(WebGl2RenderingContext::BLEND);
             gl.clear(clear_opts);
 
             for draw in &self.draws {
