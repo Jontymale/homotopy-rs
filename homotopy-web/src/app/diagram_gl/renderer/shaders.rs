@@ -6,6 +6,7 @@ pub struct Shaders {
     pub wireframe: Program,
     pub cylinder_pass: Program,
     pub lighting_pass: Program,
+    pub sheet_pass: Program,
 }
 
 impl Shaders {
@@ -50,6 +51,25 @@ impl Shaders {
                     g_albedo,
                     disable_lighting,
                     debug_normals,
+                    spec,
+                    alpha,
+                    gamma,
+                    camera_pos,
+                },
+            )?,
+            sheet_pass: program!(
+                ctx,
+                "glsl/vert_3d.glsl",
+                "glsl/sheet_pass_frag.glsl",
+                { position, normal },
+                {
+                    mv,
+                    p,
+                    albedo,
+                    t,
+                    opacity,
+                    g_position,
+                    g_albedo,
                     spec,
                     alpha,
                     gamma,

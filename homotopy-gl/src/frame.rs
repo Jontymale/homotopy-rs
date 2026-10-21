@@ -76,6 +76,7 @@ pub struct Draw<'a> {
     program: &'a Program,
     vertex_array: &'a VertexArray,
     depth_test: DepthTest,
+    blend: bool,
     uniforms: FastHashMap<&'static str, Box<dyn Uniformable>>,
     textures: Vec<&'a Texture>,
 }
@@ -93,6 +94,7 @@ impl<'a> Draw<'a> {
             program,
             vertex_array,
             depth_test,
+            blend: false,
             uniforms: Default::default(),
             textures: textures.to_owned(),
         }
@@ -106,6 +108,15 @@ impl<'a> Draw<'a> {
         textures: &[&'a Texture],
     ) -> Self {
         Self::new_with_depth(program, vertex_array, textures, DepthTest::Enable)
+    }
+
+    /// Draw with standard alpha blending and without writing to the depth
+    /// buffer, for translucent geometry drawn after the opaque scene.
+    #[inline]
+    #[must_use]
+    pub fn blended(mut self) -> Self {
+        self.blend = true;
+        self
     }
 
     #[inline]
@@ -192,6 +203,20 @@ impl<'a> Frame<'a> {
                 match draw.depth_test {
                     DepthTest::Enable => gl.enable(WebGl2RenderingContext::DEPTH_TEST),
                     DepthTest::Disable => gl.disable(WebGl2RenderingContext::DEPTH_TEST),
+                }
+
+                if draw.blend {
+                    gl.enable(WebGl2RenderingContext::BLEND);
+                    gl.blend_func_separate(
+                        WebGl2RenderingContext::SRC_ALPHA,
+                        WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA,
+                        WebGl2RenderingContext::ONE,
+                        WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA,
+                    );
+                    gl.depth_mask(false);
+                } else {
+                    gl.disable(WebGl2RenderingContext::BLEND);
+                    gl.depth_mask(true);
                 }
 
                 for (i, &texture) in draw.textures.iter().enumerate() {

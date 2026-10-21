@@ -23,6 +23,7 @@ declare_settings! {
         animate_singularities: bool = true,
         singularity_duration: u32 = 5,
         geometry_scale: u32 = 10,
+        sheet_opacity: u32 = 100,
 
         wireframe_3d: bool = false,
         mesh_hidden: bool = false,
@@ -161,6 +162,15 @@ impl Component for SettingsView {
                             AppSettings::set_shininess,
                             20,
                             80,
+                        )
+                    }
+                    {
+                        Self::view_slider(
+                            "Sheet opacity (static 3D)",
+                            AppSettings::get_sheet_opacity(),
+                            AppSettings::set_sheet_opacity,
+                            5,
+                            100,
                         )
                     }
                     {

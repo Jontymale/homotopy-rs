@@ -121,6 +121,14 @@ impl Renderer {
         let animated = n == 4 || n == 3 && self.animated_3d;
 
         let geometry_scale = AppSettings::get_geometry_scale() as f32 / 10.;
+        let opacity = AppSettings::get_sheet_opacity().min(100) as f32 / 100.;
+        // Sheet translucency is only supported for static 3D views.
+        let translucent = !animated && n == 3 && opacity < 1.;
+        // A generator is drawn as a surface (a sheet) when its codimension is two.
+        let diagram_dimension = self.scene.diagram.dimension();
+        let is_sheet = |generator: homotopy_core::Diagram0| {
+            diagram_dimension == generator.generator.dimension + 2
+        };
 
         let v = camera.view_transform(&self.ctx);
         let p = camera.perspective_transform(&self.ctx);
@@ -160,9 +168,16 @@ impl Renderer {
 
             if !AppSettings::get_mesh_hidden() {
                 for Component {
-                    vertices, albedo, ..
+                    generator,
+                    vertices,
+                    albedo,
+                    ..
                 } in &self.scene.components
                 {
+                    // Translucent sheets are drawn in their own pass after lighting.
+                    if translucent && is_sheet(*generator) {
+                        continue;
+                    }
                     // Set color lightening amount based on how generator is viewed.
                     frame.draw(draw!(program, vertices, &[], {
                         mv: v,
@@ -251,6 +266,43 @@ impl Renderer {
                     camera_pos: camera.position(),
                 }
             });
+
+            // Blend translucent sheets over the lit opaque scene
+            if translucent && !AppSettings::get_mesh_hidden() {
+                for Component {
+                    generator,
+                    vertices,
+                    albedo,
+                    ..
+                } in &self.scene.components
+                {
+                    if !is_sheet(*generator) {
+                        continue;
+                    }
+                    frame.draw(
+                        draw!(
+                            &self.shaders.sheet_pass,
+                            vertices,
+                            &[&self.gbuffer.positions, &self.gbuffer.albedo],
+                            DepthTest::Disable,
+                            {
+                                mv: v,
+                                p: p,
+                                albedo: *albedo,
+                                t: t,
+                                opacity: opacity,
+                                g_position: 0,
+                                g_albedo: 1,
+                                spec: 1e-2 * AppSettings::get_specularity() as f32,
+                                alpha: AppSettings::get_shininess() as f32,
+                                gamma: 0.1 * AppSettings::get_gamma() as f32,
+                                camera_pos: camera.position(),
+                            }
+                        )
+                        .blended(),
+                    );
+                }
+            }
 
             // Add in relevant wireframes
             if AppSettings::get_wireframe_3d() {
