@@ -601,16 +601,36 @@ pub fn generate_download(name: &str, ext: &str, data: &[u8]) -> Result<(), wasm_
     web_sys::Url::revoke_object_url(&url)
 }
 
+/// The path the app is served under, from a `<base href>` element if the page
+/// has one (for example when hosted in a subdirectory), and `/` otherwise.
+#[must_use]
+pub fn base_path() -> String {
+    web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.query_selector("base").ok().flatten())
+        .and_then(|base| base.get_attribute("href"))
+        .map(|href| {
+            if href.ends_with('/') {
+                href
+            } else {
+                format!("{href}/")
+            }
+        })
+        .unwrap_or_else(|| "/".to_owned())
+}
+
 pub fn update_window_url_path(new_path: &str) {
     let window = web_sys::window().unwrap();
     let origin = window.location().origin().unwrap();
+    let base = base_path();
+    let base = base.trim_end_matches('/');
     window
         .history()
         .unwrap()
         .replace_state_with_url(
             &None::<u8>.into(),
             "title",
-            Some(&format!("{origin}{new_path}")),
+            Some(&format!("{origin}{base}{new_path}")),
         )
         .unwrap();
 }

@@ -166,6 +166,11 @@ impl App {
     // TODO: replace this with yew-router
     fn load_project_from_url_path(ctx: &Context<Self>) {
         let path_str = web_sys::window().unwrap().location().pathname().unwrap();
+        // Ignore the directory the app is served from, if any.
+        let base = model::base_path();
+        let path_str = path_str
+            .strip_prefix(base.trim_end_matches('/'))
+            .unwrap_or(&path_str);
         let path = &path_str.split('/').collect::<Vec<&str>>()[1..];
         if path[0] == "p" && path.len() == 2 {
             // Published project

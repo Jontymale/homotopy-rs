@@ -1,0 +1,71 @@
+name: Deploy to GitHub Pages
+
+# Builds the web app with the project's own Nix flake (the same build as CI and
+# the live site) and publishes it to this repository's GitHub Pages site.
+
+on:
+  push:
+    branches:
+      - transparent-sheets
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            max-jobs = 4
+      - name: Use the homotopy-io binary cache (read only)
+        uses: cachix/cachix-action@v16
+        with:
+          name: homotopy-io
+      - name: Build web app
+        run: nix build -L --show-trace .
+      - name: Prepare site for a subdirectory
+        run: |
+          mkdir _site
+          cp -rL result/. _site/
+          chmod -R u+w _site
+          base="/${GITHUB_REPOSITORY#*/}/"
+          # Serve under /<repo>/: add a <base> element and make root paths relative to it
+          sed -i \
+            -e "s|<head>|<head>\n    <base href=\"$base\">|" \
+            -e 's|href="/|href="|g' \
+            -e 's|src="/|src="|g' \
+            -e "s|import('/|import('./|g" \
+            _site/index.html
+          # Send unknown paths (such as /p/<id>) back to the app
+          cp _site/index.html _site/404.html
+          touch _site/.nojekyll
+          ls -la _site
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
