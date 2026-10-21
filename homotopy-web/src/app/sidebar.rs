@@ -348,7 +348,7 @@ impl Component for Sidebar {
             <>
                 <aside class="sidebar">
                     <a href="#about">
-                        <img src="/logo.svg" alt="Homotopy.io logo" class="sidebar__logo" />
+                        <img src={format!("{}logo.svg", crate::model::base_path())} alt="Homotopy.io logo" class="sidebar__logo" />
                     </a>
                     {self.nav(ctx)}
                     {self.tools(ctx)}

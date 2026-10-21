@@ -42,13 +42,16 @@ jobs:
           cp -rL result/. _site/
           chmod -R u+w _site
           base="/${GITHUB_REPOSITORY#*/}/"
-          # Serve under /<repo>/: add a <base> element and make root paths relative to it
+          # Serve under /<repo>/: make root paths relative, then add a <base>
+          # element. The <base> goes in last so the first two rules cannot
+          # strip its leading slash.
           sed -i \
-            -e "s|<head>|<head>\n    <base href=\"$base\">|" \
             -e 's|href="/|href="|g' \
             -e 's|src="/|src="|g' \
             -e "s|import('/|import('./|g" \
             _site/index.html
+          sed -i "s|<head>|<head>\n    <base href=\"$base\">|" _site/index.html
+          grep -n '<base' _site/index.html
           # Send unknown paths (such as /p/<id>) back to the app
           cp _site/index.html _site/404.html
           touch _site/.nojekyll

@@ -173,7 +173,7 @@ pub fn get_onboarding_message() -> Html {
     html! {
         <div class="workspace__empty-diagram">
             <div class="workspace__empty-diagram-content">
-                <img src="/logo.svg" alt="Homotopy.io logo" class="workspace__empty-logo" />
+                <img src={format!("{}logo.svg", crate::model::base_path())} alt="Homotopy.io logo" class="workspace__empty-logo" />
                 <header class="workspace__empty-header">
                     <h3>{"Don't Panic!"}</h3>
                 </header>
